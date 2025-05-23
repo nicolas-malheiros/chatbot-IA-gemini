@@ -17,15 +17,10 @@ app.secret_key = 'alura'
 
 contexto = carrega("dados\musimart.txt")
 
-def bot(prompt):
-    maximo_tentativas = 1
-    repeticao = 0
+def criar_chatbot():
+    personalidade = "neutro"
 
-    while True:
-        try:
-            personalidade = personas[selecionar_persona(prompt)]
-
-            prompt_do_sistema = f"""
+    prompt_do_sistema = f"""
             # PERSONA
 
             Você é um chatbot de atendimento a clientes de um e-commerce.
@@ -38,20 +33,45 @@ def bot(prompt):
 
             # PERSONALIDADE
             {personalidade}
+
+            # Histórico
+            Acesse sempre o histórico de mensagens, e recupere informações ditas anteriormente.
             """
 
-            configuracao_modelo = {
-                "temperature" : 0.1,
-                "max_output_tokens" : 8192
-            }
+    configuracao_modelo = {
+        "temperature" : 0.1,
+        "max_output_tokens" : 8192
+    }
 
-            llm = genai.GenerativeModel(
-                model_name=MODELO_ESCOLHIDO,
-                system_instruction = prompt_do_sistema,
-                generation_config=configuracao_modelo
-            )
+    llm = genai.GenerativeModel(
+        model_name=MODELO_ESCOLHIDO,
+        system_instruction = prompt_do_sistema,
+        generation_config=configuracao_modelo
+    )
 
-            resposta = llm.generate_content(prompt)
+    chatbot = llm.start_chat(history=[])
+
+    return chatbot
+
+chatbot = criar_chatbot()
+
+def bot(prompt):
+    maximo_tentativas = 1
+    repeticao = 0
+
+    while True:
+        try:
+            personalidade = personas[selecionar_persona(prompt)]
+            mensagem_usuario = f"""
+            Considere esta personalidade para responder a mensagem:
+            {personalidade}
+
+            Responda a seguinte mensagem, sempre lembrando do histórico:
+            {prompt}
+            """
+
+            resposta = chatbot.send_message(mensagem_usuario)
+            
             return resposta.text
         except Exception as erro:
             repeticao += 1
